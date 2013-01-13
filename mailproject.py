@@ -7,6 +7,8 @@ from optparse import OptionParser
 import ConfigParser
 import psycopg2
 import smtplib
+import sys
+from email.parser import Parser
 
 # Process out command line arguements.
 
@@ -40,15 +42,21 @@ else:
 	print "Not-SSL"
 	mailserver = smtplib.SMTP(config.get("Mailserver","host"),config.get("Mailserver","port"))
 
+print "Read Standard in now!"
+email = Parser().parse(sys.stdin)
+print "End of standard in!"
 # Main Body!
 
-cur.execute('SELECT customer_number FROM api.customer WHERE customer_type = %s', (options.cust_type, ))
+cur.execute('SELECT customer_number, customer_name, correspond_contact_email FROM api.customer WHERE customer_type = %s', (options.cust_type, ))
 custlist = cur.fetchall()
 
-
-
-
+for cust in custlist:
+	(cust_number, cust_name, contact_email) = cust
+	print cust
+	email.replace_header('To', contact_email)
+	mailserver.sendmail(email['From'],email['To'], email.as_string())
 
 # Clean everything up!
+mailserver.quit()
 cur.close()
 conn.close()
