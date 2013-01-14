@@ -9,6 +9,7 @@ import psycopg2
 import smtplib
 import sys
 from email.parser import Parser
+from mako.template import Template
 
 # Process out command line arguements.
 
@@ -47,14 +48,16 @@ email = Parser().parse(sys.stdin)
 print "End of standard in!"
 # Main Body!
 
-cur.execute('SELECT customer_number, customer_name, correspond_contact_email FROM api.customer WHERE customer_type = %s', (options.cust_type, ))
+cur.execute('SELECT customer_number, customer_name, correspond_contact_email, correspond_contact_first FROM api.customer WHERE customer_type = %s', (options.cust_type, ))
 custlist = cur.fetchall()
 
 for cust in custlist:
-	(cust_number, cust_name, contact_email) = cust
+	(cust_number, cust_name, contact_email, contact_first) = cust
 	print cust
 	email.replace_header('To', contact_email)
-	mailserver.sendmail(email['From'],email['To'], email.as_string())
+	mytemplate = Template(email.as_string())
+	print mytemplate.render(cust_name=cust_name, contact_email=contact_email, contact_first=contact_first)
+#	mailserver.sendmail(email['From'],email['To'], email.as_string())
 
 # Clean everything up!
 mailserver.quit()
